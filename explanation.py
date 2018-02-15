@@ -125,7 +125,9 @@ if __name__ == '__main__':
     
     tp_exp_df = get_explanations(common_tp_insts, model_dict,
                                  X_train_dict, top_res, seed_num, X_train, X_test,
-                                 output_path="../output/tp_explanations.csv")
+                                 output_path="../output/tp_explanations.csv",
+                                 num_samples=5000, labels=None,
+                                 model_regressor=None)
     
     ##explanations for tp predictions
     tn_inst_dict = get_exp_instances(model_dict, 0, X_test, y_test)

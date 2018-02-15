@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support
-#from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix
 
 from sklearn.model_selection import StratifiedKFold
 
@@ -23,7 +23,7 @@ from imblearn.over_sampling import SMOTE
 from imblearn.combine import SMOTEENN, SMOTETomek
 
 
-def read_X_y(file, set_0_1 = True, zero = 1, one = 2):
+def read_X_y(file, set_0_1 = True, zero = 1, one = 2, ptid_as_idx=False):
     """
     reads file and sets class values to 0 and 1 using the mapping values
     """
@@ -32,6 +32,11 @@ def read_X_y(file, set_0_1 = True, zero = 1, one = 2):
     y = df.iloc[:,df.shape[1]-1]
     if(set_0_1):
         y = set_y_0_1(y, zero = 1, one = 2)
+    if(ptid_as_idx==True):
+        ## SET Patient Ids as index and drop the PTID column
+        X.index = X['1.STNUM']
+        X.drop('1.STNUM',axis=1,inplace=True)
+        y.index = X.index
     return X, y
 
 def set_y_0_1(y, zero = 1, one = 2):
@@ -64,33 +69,39 @@ def resample(X, y, method, seed_num):
 def cross_validate(estimator, skf, X, y, resample_method=None):
     auroc_list = []
     f1_list = []
+    precision_list = []
+    recall_list = []
+    spec_list=[]
     for train_index, test_index in skf.split(X, y):
         X_train, X_test = X[train_index,:], X[test_index,:]
         y_train, y_test = y[train_index], y[test_index]
         if resample_method != None:
             X_train, y_train = resample(X_train, y_train, resample_method, seed_num)
         estimator.fit(X_train, y_train)
-        auroc, f1, _, _ = test_model(estimator, X_test, y_test)
+        auroc, f1, precision, recall, specifcity = test_model(estimator, X_test, y_test)
         auroc_list.append(auroc)
         f1_list.append(f1)
-    return np.mean(auroc_list), np.mean(f1_list)
+        precision_list.append(precision)
+        recall_list.append(recall)
+        spec_list.append(specifcity)
+    return np.mean(auroc_list), np.mean(f1_list), np.mean(precision_list), np.mean(recall_list), np.mean(spec_list)
 
-def get_estimator(est, par, seed_num):
+def get_estimator(est, par, seed_num, class_weight=None):
     if est == 'RF':
         estimator = RandomForestClassifier(n_estimators=int(par), random_state=seed_num,
-                                           class_weight=None)
+                                           class_weight=class_weight)
     elif est == 'SVM':
-        estimator = SVC(C=par, class_weight=None, kernel='rbf', probability=True,
+        estimator = SVC(C=par, class_weight=class_weight, kernel='rbf', probability=True,
                         random_state=seed_num)
                         
     elif est == 'NB':
         estimator = MultinomialNB(alpha=par, class_prior=None, fit_prior=True)
     
     elif est == 'LR_L1':
-        estimator = LogisticRegression(penalty='l1', C=par, random_state=seed_num)
+        estimator = LogisticRegression(penalty='l1', C=par, random_state=seed_num, class_weight=class_weight)
         
     elif est == 'LR_L2':
-        estimator = LogisticRegression(penalty='l2', C=par, random_state=seed_num)
+        estimator = LogisticRegression(penalty='l2', C=par, random_state=seed_num, class_weight=class_weight)
     else:
         raise Exception('Estimator "%s" is not supported!' % est)
     
@@ -98,39 +109,37 @@ def get_estimator(est, par, seed_num):
     
 def get_measures(probs, y_pred, y_true):
     auroc = roc_auc_score(y_true, probs)
-    #f1 = f1_score(y_test, estimator.predict(X_test), average='binary')
     precision, recall, f1, _ = precision_recall_fscore_support(
                             y_true, y_pred, pos_label = 1, average='binary')
-    return auroc, f1, precision, recall
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    specificity = tn/(tn+fp)
+    return auroc, f1, precision, recall, specificity
 
 
 if __name__ == '__main__':
     
     seed_num = 0
     np.random.seed(seed_num)
-    min_auc = .84
+#    min_auc = .84
     
-    X_train, y_train = read_X_y('../data/port_train.csv')
-    # X_smote, y_smote = read_X_y('../data/port_train_smote.csv')
-    X_test, y_test = read_X_y('../data/port_test.csv')
+    X_train, y_train = read_X_y('../data/port_train_new_subset.csv', set_0_1=False, ptid_as_idx=True)
+    X_test, y_test = read_X_y('../data/port_test_new_subset.csv', set_0_1=False, ptid_as_idx=True)
     
-    n_trees = np.linspace(1000, 10000, num=10, dtype='int')
-    C = np.arange(0.1, 5, .5)
-    nb_alphas = np.arange(0, 250, 50)
+    n_trees = [500, 1000, 3000]#np.linspace(1000, 10000, num=5, dtype='int')
+    C = np.array([0.1, 1, 10])
+    nb_alphas = [0, 0.1, 1, 10, 100] #np.arange(0, 250, 50)
     estimators = [('RF', n_trees),('SVM', C),('NB', nb_alphas),('LR_L1', C),('LR_L2', C)]
+     #estimators = [('LR_L1', C)]     
     
     skf = StratifiedKFold(n_splits=10, random_state = seed_num)
     
-    resample_methods = [None, 'SMOTE', 'SMOTEENN', 'SMOTETomek']
-    cv_results = {'resample_method': [], 'estimator': [], 'param': [], 'auroc': [], 'f1': []}
+    resample_methods = [None, 'SMOTE']
+    cv_results = {'resample_method': [], 'estimator': [], 'param': [], 'auroc': [], 'f1': [], 'precision': [], 'recall': [], 'specificity':[]}
     
     loop_counter = 0
     
     ## optimizes parameters for best F1
     for est, params in estimators:
-        f1_max = -1
-        best_param = -1
-        best_resample = None
         print('Cur_estimator: ' + est)
         
         for resample_method in resample_methods:
@@ -144,42 +153,40 @@ if __name__ == '__main__':
                 cv_results['param'].append(par)
                 
                 estimator = get_estimator(est, par, seed_num)
-                auroc, f1 = cross_validate(estimator, skf, X_train.as_matrix(), y_train.as_matrix(), resample_method)
+                auroc, f1, prec, recall, specificity = cross_validate(estimator, skf, X_train.as_matrix(), y_train.as_matrix(), resample_method)
     
                 cv_results['auroc'].append(auroc)
                 cv_results['f1'].append(f1)
-            
-                if auroc > min_auc:
-                    if f1 > f1_max:
-                        f1_max = f1
-                        best_param = par
-                        best_resample = resample_method
-                        
-        print('Estimator: ' + est)
-        print('f1_max= ' + str(f1_max))
-        print('best_resample= ' + str(best_resample))
-        print('best_param_value= ' + str(best_param))
+                cv_results['precision'].append(prec)
+                cv_results['recall'].append(recall)
+                cv_results['specificity'].append(specificity)
         
     
-    results = pd.DataFrame(cv_results, columns=['estimator','resample_method', 'param','f1', 'auroc'])
+    results = pd.DataFrame(cv_results, columns=['estimator','resample_method', 'param','f1', 'auroc','precision', 'recall','specificity'])
     
-    results.to_csv("../output/model_evaluation/model_selection_phase.csv", index=False)
+    results.to_csv("../output/model_evaluation/model_selection_new_port_7.csv", index=False)
     
-    top_res = results.loc[results.auroc>=.83,:].groupby('estimator').apply(lambda g: g.sort_values(['f1','auroc'], ascending=False)).groupby('estimator').head(1)
+    top_res = results.groupby('estimator').apply(lambda g: g.sort_values(['f1','auroc'], ascending=False)).groupby('estimator').head(1)
     
-    top_res.to_csv("../output/model_evaluation/model_selection_top_results_auc_greater_than_0.83.csv", index = False)
+    top_res.round(2).to_csv("../output/model_evaluation/model_selection_top_results.csv", index = False)
     
     
     ## test result of model selection on TEST set
+    test_result = pd.DataFrame(columns=['estimator', 'resample_method', 'param', 'auroc', 'f1','precision',
+       'recall', 'specificity'])
     for est in top_res.estimator:
-        ind = (top_res.estimator == est)
-        model = get_estimator(est, top_res[ind]['param'].item(), seed_num)
-        resample_method = top_res[ind]['resample_method'].item()
+        idx = (top_res.estimator == est)
+        param = top_res[idx]['param'].item()
+        model = get_estimator(est, param, seed_num)
+        resample_method = top_res[idx]['resample_method'].item()
         if(resample_method == None):
             model.fit(X_train, y_train)
         else:
             X_res, y_res = resample(X_train, y_train, resample_method, seed_num)
             model.fit(X_res, y_res)
-        print(est + ': auroc, f1, precision, recall:' + str(test_model(model, X_test, y_test)))
+        row = [est, resample_method, param] + list(test_model(model, X_test, y_test))
+        test_result = test_result.append(pd.DataFrame(np.array([row]),columns=test_result.columns.tolist()))
+        #print(est + ': auroc, f1, precision, recall, specificity:' + str(test_model(model, X_test, y_test)))
     
-
+    test_result.round(2).to_csv("../output/model_evaluation/model_selection_test_results_for_top_models.csv", index = False)
+    
