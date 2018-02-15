@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jan 22 10:40:39 2018
-
 @author: mot16
+
+Measures the agreemet rates of physiscians with LIME explanations
 """
 import pandas as pd
 #import numpy as np

@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jan 28 23:30:01 2018
+@author: mot16
 
 1- measures aggreeement between 3 physicians (pairwise kappa score)
 2- Chi-2 test between agreement rates in majority real tp vs majority real tn  
 3- Chi-2 test between disgreement rates in majority fake tp vs majority fake tn  
-
-@author: mot16
 """
 import numpy as np
 import pandas as pd

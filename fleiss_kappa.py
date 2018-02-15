@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Feb  4 10:26:50 2018
+@author: mot16
 
 Fleiss Kappa score for multiple annotators
 source: Wikipedia
-
-@author: mot16
 """
 import pandas as pd
 

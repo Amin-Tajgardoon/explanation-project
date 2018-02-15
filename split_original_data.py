@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Nov 20 11:44:47 2017
-
 @author: mot16
+
+Splits original data to train and test, removes irrelevant columns
 """
 import numpy as np
 import pandas as pd

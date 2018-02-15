@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Oct 26 13:39:03 2017
-
 @author: mot16
+
+performs model selection by cross validation and resampling, saves the results into files
 """
 
 import numpy as np

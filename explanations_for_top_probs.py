@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov 30 19:29:49 2017
-
 @author: mot16
+
+generates LIME explanations for predictions in which the predictive model has high confidence
 """
 import numpy as np
 import pandas as pd

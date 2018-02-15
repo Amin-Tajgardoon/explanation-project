@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Nov 21 11:06:08 2017
-
 @author: mot16
+
+draw count plots
 """
 
 import matplotlib as mpl

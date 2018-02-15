@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Dec 13 16:22:23 2017
-
 @author: mot16
+
+Function to generate customized plot for LIMe explanations
 """
 import numpy as np
 import pandas as pd

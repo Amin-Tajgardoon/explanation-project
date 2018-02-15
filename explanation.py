@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Oct 28 11:53:41 2017
-
 @author: mot16
+
+generates explanations (feed to test of robustness)
 """
 import io
 from contextlib import redirect_stdout

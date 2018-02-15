@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Nov 22 18:42:07 2017
-
 @author: mot16
+
+Generates a Word document that contains patient descriptions and LIME explanations as plots
 """
 import pandas as pd
 import numpy as np

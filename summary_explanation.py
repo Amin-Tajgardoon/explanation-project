@@ -3,6 +3,8 @@
 Created on Sun Oct 29 09:24:50 2017
 
 @author: mot16
+
+Summarize LIME explanations
 """
 import pandas as pd
 import numpy as np
