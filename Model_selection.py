@@ -73,19 +73,23 @@ def cross_validate(estimator, skf, X, y, resample_method=None):
     precision_list = []
     recall_list = []
     spec_list=[]
+    probs = np.empty(y.shape)
     for train_index, test_index in skf.split(X, y):
         X_train, X_test = X[train_index,:], X[test_index,:]
         y_train, y_test = y[train_index], y[test_index]
         if resample_method != None:
             X_train, y_train = resample(X_train, y_train, resample_method, seed_num)
         estimator.fit(X_train, y_train)
-        auroc, f1, precision, recall, specifcity = test_model(estimator, X_test, y_test)
+        #test_model(estimator, X_test, y_test)
+        p = estimator.predict_proba(X_test)
+        probs[test_index] = p[:,1]
+        auroc, f1, precision, recall, specifcity = get_measures(p[:,1], estimator.predict(X_test), y_test)
         auroc_list.append(auroc)
         f1_list.append(f1)
         precision_list.append(precision)
         recall_list.append(recall)
         spec_list.append(specifcity)
-    return np.mean(auroc_list), np.mean(f1_list), np.mean(precision_list), np.mean(recall_list), np.mean(spec_list)
+    return probs, np.mean(auroc_list), np.mean(f1_list), np.mean(precision_list), np.mean(recall_list), np.mean(spec_list)
 
 def get_estimator(est, par, seed_num, class_weight=None):
     if est == 'RF':
@@ -126,15 +130,15 @@ if __name__ == '__main__':
     X_train, y_train = read_X_y('../data/port_train_new_subset.csv', set_0_1=False, ptid_as_idx=True)
     X_test, y_test = read_X_y('../data/port_test_new_subset.csv', set_0_1=False, ptid_as_idx=True)
     
-    n_trees = [500, 1000, 3000]#np.linspace(1000, 10000, num=5, dtype='int')
+    n_trees = [500]#, 1000, 3000]#np.linspace(1000, 10000, num=5, dtype='int')
     C = np.array([0.1, 1, 10])
-    nb_alphas = [0, 0.1, 1, 10, 100] #np.arange(0, 250, 50)
+    nb_alphas = [10]#[0, 0.1, 1, 10, 100] #np.arange(0, 250, 50)
     estimators = [('RF', n_trees),('SVM', C),('NB', nb_alphas),('LR_L1', C),('LR_L2', C)]
      #estimators = [('LR_L1', C)]     
     
     skf = StratifiedKFold(n_splits=10, random_state = seed_num)
     
-    resample_methods = [None, 'SMOTE']
+    resample_methods = ['SMOTE']#[None, 'SMOTE']
     cv_results = {'resample_method': [], 'estimator': [], 'param': [], 'auroc': [], 'f1': [], 'precision': [], 'recall': [], 'specificity':[]}
     
     loop_counter = 0
@@ -154,13 +158,15 @@ if __name__ == '__main__':
                 cv_results['param'].append(par)
                 
                 estimator = get_estimator(est, par, seed_num)
-                auroc, f1, prec, recall, specificity = cross_validate(estimator, skf, X_train.as_matrix(), y_train.as_matrix(), resample_method)
-    
+                probs, auroc, f1, prec, recall, specificity = cross_validate(estimator, skf, X_train.as_matrix(), y_train.as_matrix(), resample_method)
+                np.savetxt("../output/probs_" + est + "_" + str(par) + "_" + resample_method + ".csv", probs, delimiter=",")
                 cv_results['auroc'].append(auroc)
                 cv_results['f1'].append(f1)
                 cv_results['precision'].append(prec)
                 cv_results['recall'].append(recall)
                 cv_results['specificity'].append(specificity)
+                
+                
         
     
     results = pd.DataFrame(cv_results, columns=['estimator','resample_method', 'param','f1', 'auroc','precision', 'recall','specificity'])

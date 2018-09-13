@@ -19,7 +19,7 @@ def draw_exp_plot(exp_df, class_one_prob, out_path):
     ax1 = plt.subplot(gs[0, 0])
     ax2 = plt.subplot(gs[:, 4:])
     
-    probs_df = pd.DataFrame({'outcome':['yes', 'no'], 'prob':[class_one_prob,1-class_one_prob]})
+    probs_df = pd.DataFrame({'outcome':['yes', 'no'], 'prob':[round(class_one_prob,2), round(1-class_one_prob, 2)]})
     prob_ax =sns.barplot(y="outcome", x="prob", data=probs_df, color='blue', ax=ax1)
     for i in range(probs_df.shape[0]):
         p=probs_df['prob'][i]
@@ -42,7 +42,7 @@ def draw_exp_plot(exp_df, class_one_prob, out_path):
     exp_ax.yaxis.set_tick_params(length=0)
     sns.despine(ax=exp_ax, left=True)
     
-    plt.savefig(out_path, bbox_inches='tight', dpi='figure', frameon=True, edgecolor='black')
+    plt.savefig(out_path, bbox_inches='tight', dpi=300, frameon=True, edgecolor='black')
 
 if __name__ == 'main':
     
